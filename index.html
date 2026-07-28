@@ -123,6 +123,7 @@ footer{text-align:center;color:var(--dim);font-size:.68rem;padding:20px;line-hei
 <header>
   <h1>⛵ Pré<span>Nav</span></h1>
   <button id="locBtn" onclick="openModal()">📍 escolher local</button>
+  <button id="refBtn" onclick="if(loc)loadAll()" title="Atualizar" style="background:var(--panel);border:1px solid var(--line);color:var(--acc);border-radius:20px;padding:7px 11px;font-size:.95rem;cursor:pointer">↻</button>
   <button id="sosBtn" onclick="openSOS()">🆘 SOS</button>
 </header>
 <nav>
@@ -231,7 +232,7 @@ function setModel(){model=$('modelSel').value;localStorage.setItem('pn_model',mo
 let cell = localStorage.getItem('pn_cell')||'nearest';
 function setCell(){cell=$('cellSel').value;localStorage.setItem('pn_cell',cell);loadAll();}
 let favs = JSON.parse(localStorage.getItem('pn_favs')||'[]');
-let FC=null, MR=null, tideChart=null, windChart=null;
+let FC=null, MR=null, tideChart=null, windChart=null, lastLoad=0;
 
 /* ---------- util ---------- */
 const $=id=>document.getElementById(id);
@@ -378,6 +379,7 @@ async function loadAll(){
     loc.tz=FC.timezone||loc.tz; loc.off=FC.utc_offset_seconds;
     localStorage.setItem('pn_loc',JSON.stringify(loc));
     localStorage.setItem('pn_cache',JSON.stringify({FC,MR,when:Date.now(),loc}));
+    lastLoad=Date.now();
     render();
   }catch(e){
     const c=JSON.parse(localStorage.getItem('pn_cache')||'null');
@@ -481,7 +483,7 @@ function toggleDay(d){
 }
 function renderNow(){
   const h=FC.hourly,i=hIdx(),m=MR?MR.hourly:null;
-  $('nowStamp').textContent=`· ${loc.name} (${loc.lat.toFixed(3)}, ${loc.lon.toFixed(3)}) · ${fmtT(new Date())}`;
+  $('nowStamp').textContent=`· ${loc.name} (${loc.lat.toFixed(3)}, ${loc.lon.toFixed(3)}) · dados das ${fmtT(new Date(lastLoad||Date.now()))}`;
   const cards=[
     ['Vento',`${Math.round(h.wind_speed_10m[i])} <small>kt ${compass(h.wind_direction_10m[i])}</small>`,`rajadas ${Math.round(h.wind_gusts_10m[i])} kt`],
     ['Temperatura',`${h.temperature_2m[i].toFixed(0)} <small>°C</small>`,`nuvens ${h.cloud_cover[i]}%`],
@@ -785,6 +787,12 @@ function starCalc(){
   ].map(a=>`<div class="astro"><div class="lbl">${a[0]}</div><b style="${a[0].includes('Altura')&&!vis?'color:var(--warn)':''}">${a[1]}</b></div>`).join('');
 }
 /* ---------- boot ---------- */
+/* atualiza ao voltar ao app (webapp fixado congela em 2º plano) */
+const STALE=15*60*1000;
+document.addEventListener('visibilitychange',()=>{
+  if(!document.hidden&&loc&&Date.now()-lastLoad>STALE)loadAll();});
+window.addEventListener('pageshow',e=>{
+  if(e.persisted&&loc&&Date.now()-lastLoad>STALE)loadAll();});
 if(loc){loadAll();}else{openModal();}
 </script>
 </body>
