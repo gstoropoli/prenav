@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b1929">
+<title>PréNav — Briefing de Navegação</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#0b1929; --panel:#122438; --panel2:#0e1e30; --line:#1e3a55;
+  --txt:#dbe9f7; --dim:#7fa1c0; --acc:#38bdf8; --acc2:#fbbf24;
+  --ok:#34d399; --warn:#f87171; --radius:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;padding-bottom:40px}
+header{position:sticky;top:0;z-index:50;background:rgba(11,25,41,.95);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:10px 14px;display:flex;align-items:center;gap:10px}
+header h1{font-size:1.05rem;font-weight:700;letter-spacing:.3px}
+header h1 span{color:var(--acc)}
+#locBtn{margin-left:auto;background:var(--panel);border:1px solid var(--line);color:var(--txt);border-radius:20px;padding:7px 14px;font-size:.85rem;cursor:pointer;max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#locBtn b{color:var(--acc)}
+nav{position:sticky;top:49px;z-index:49;display:flex;gap:8px;overflow-x:auto;padding:8px 14px;background:rgba(11,25,41,.95);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);scrollbar-width:none}
+nav::-webkit-scrollbar{display:none}
+nav a{flex:0 0 auto;font-size:.8rem;padding:6px 12px;border-radius:16px;background:var(--panel);border:1px solid var(--line);color:var(--dim);text-decoration:none}
+nav a:active{color:var(--acc)}
+main{padding:14px;max-width:920px;margin:0 auto}
+section{margin-bottom:22px;scroll-margin-top:100px}
+h2{font-size:.95rem;color:var(--acc);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+h2 small{color:var(--dim);text-transform:none;letter-spacing:0;font-weight:400}
+.wxhero{border-radius:24px;padding:26px 20px 16px;color:#fff;text-align:center;margin-bottom:12px;
+  box-shadow:0 8px 24px rgba(0,0,0,.35);position:relative;overflow:hidden}
+.wxhero .wxloc{font-size:1.15rem;font-weight:600;letter-spacing:.3px;text-shadow:0 1px 3px rgba(0,0,0,.25)}
+.wxhero .wxtemp{font-size:4.6rem;font-weight:200;line-height:1.05;margin:2px 0 0;text-shadow:0 2px 6px rgba(0,0,0,.2)}
+.wxhero .wxdesc{font-size:.95rem;font-weight:500;opacity:.95}
+.wxhero .wxhl{font-size:.9rem;opacity:.9;margin-top:2px}
+.wxchips{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:12px}
+.wxchips span{background:rgba(255,255,255,.18);backdrop-filter:blur(6px);border-radius:14px;padding:5px 11px;font-size:.75rem;font-weight:600}
+.wxstrip{display:flex;gap:4px;overflow-x:auto;margin-top:14px;padding:10px 4px 6px;border-top:1px solid rgba(255,255,255,.25);scrollbar-width:none}
+.wxstrip::-webkit-scrollbar{display:none}
+.wxstrip .wh{flex:0 0 52px;text-align:center;font-size:.72rem}
+.wxstrip .wh .ic{font-size:1.25rem;display:block;margin:3px 0}
+.wxstrip .wh b{font-size:.85rem}
+.wxstrip .wh .wk{opacity:.85;font-size:.66rem}
+.wxdays{margin-top:6px;border-top:1px solid rgba(255,255,255,.25);padding-top:4px;text-align:left}
+.wd{display:flex;align-items:center;gap:8px;padding:7px 4px;font-size:.85rem;cursor:pointer;border-radius:8px}
+.wd:active{background:rgba(255,255,255,.12)}
+.wdd{display:none}
+.wdd.open{display:block}
+.wdd .wxstrip{border-top:none;margin:2px 0 6px;background:rgba(0,0,0,.15);border-radius:12px;padding:8px 6px}
+.wdd .wh .pr{font-size:.62rem;color:#bfe8ff;min-height:12px;display:block}
+.wd .dn{width:44px;font-weight:600;text-transform:capitalize}
+.wd .ic{width:26px;text-align:center;font-size:1.05rem}
+.wd .lo,.wd .hi{width:30px;text-align:right;font-variant-numeric:tabular-nums}
+.wd .lo{opacity:.7}
+.wd .bar{flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,.25);position:relative}
+.wd .bar i{position:absolute;top:0;height:4px;border-radius:2px;background:linear-gradient(90deg,#7dd3fc,#fbbf24)}
+.wd .wk{width:46px;text-align:right;font-size:.7rem;opacity:.85}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:12px}
+.card .lbl{font-size:.7rem;color:var(--dim);text-transform:uppercase;letter-spacing:.5px}
+.card .val{font-size:1.5rem;font-weight:700;margin-top:4px}
+.card .val small{font-size:.85rem;font-weight:400;color:var(--dim)}
+.card .sub{font-size:.75rem;color:var(--dim);margin-top:2px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px}
+.tblwrap{overflow-x:auto;border-radius:var(--radius);border:1px solid var(--line);background:var(--panel2)}
+table.wg{border-collapse:collapse;font-size:.72rem;white-space:nowrap}
+table.wg th{position:sticky;left:0;background:var(--panel);color:var(--dim);text-align:left;padding:4px 8px;font-weight:600;z-index:2;border-bottom:1px solid var(--line);min-width:86px}
+table.wg td{text-align:center;padding:4px 3px;min-width:34px;border-bottom:1px solid var(--line);color:#0b1929;font-weight:600}
+table.wg td.hd{background:var(--panel2);color:var(--dim);font-weight:600}
+table.wg td.day{background:var(--panel);color:var(--acc);font-weight:700;border-left:2px solid var(--line)}
+table.wg td.plain{color:var(--txt);font-weight:500;background:var(--panel2)}
+.arrow{display:inline-block;font-size:.95rem;line-height:1}
+canvas{max-width:100%}
+.tides{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-top:12px}
+.tide{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:.85rem}
+.tide b{font-size:1rem}
+.tide .hi{color:var(--acc)} .tide .lo{color:var(--acc2)}
+.moonrow{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+#moonIcon{font-size:3.2rem;line-height:1}
+.astrogrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-top:12px}
+.astro{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:.8rem}
+.astro .lbl{color:var(--dim);font-size:.68rem;text-transform:uppercase}
+.astro b{font-size:.95rem}
+table.alm{width:100%;border-collapse:collapse;font-size:.78rem;margin-top:10px}
+table.alm th{color:var(--dim);font-weight:600;padding:6px;border-bottom:1px solid var(--line);text-align:right}
+table.alm td{padding:6px;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums}
+table.alm th:first-child,table.alm td:first-child{text-align:left}
+.links a{display:flex;justify-content:space-between;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:13px 14px;margin-bottom:8px;color:var(--txt);text-decoration:none;font-size:.9rem}
+.links a small{display:block;color:var(--dim);font-size:.72rem;margin-top:2px}
+.links a::after{content:"↗";color:var(--acc)}
+.note{font-size:.72rem;color:var(--dim);margin-top:8px;line-height:1.4}
+input[type=text],input[type=date]{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:11px 12px;color:var(--txt);font-size:1rem}
+input[type=date]{color-scheme:dark}
+#modal,#sosModal{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:100;display:none;align-items:flex-start;justify-content:center;padding:60px 16px;overflow-y:auto}
+#modal.open,#sosModal.open{display:flex}
+#modalBox,#sosMBox{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;width:100%;max-width:440px}
+#sosMBox{border-color:#7f1d1d;box-shadow:0 0 0 2px rgba(248,113,113,.35)}
+#sosBtn{background:#dc2626;color:#fff;border:none;border-radius:20px;padding:7px 13px;font-size:.85rem;font-weight:800;cursor:pointer;letter-spacing:.5px}
+#sosMBox h3{color:#f87171;font-size:1.05rem;margin-bottom:2px}
+#sosMBox .astro b{font-size:1.05rem}
+.sosCall{display:block;background:#dc2626;color:#fff;text-decoration:none;text-align:center;font-size:1.35rem;font-weight:800;border-radius:14px;padding:14px;margin:10px 0}
+.sosCall small{display:block;font-size:.75rem;font-weight:600;opacity:.9}
+.sosStep{display:flex;gap:12px;align-items:flex-start;margin:12px 0}
+.sosNum{flex:0 0 30px;height:30px;border-radius:50%;background:#dc2626;color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:1rem}
+.sosStep p{font-size:.95rem;line-height:1.45;margin:2px 0 0}
+.sosStep p b{color:#fca5a5}
+.sosScript{background:#1c0f0f;border:1px dashed #7f1d1d;border-radius:12px;padding:12px;font-size:1.02rem;line-height:1.6;margin:8px 0}
+.sosScript b{color:#f87171}
+#sosMBox details{margin-top:10px}
+#sosMBox summary{cursor:pointer;color:var(--acc);font-size:.85rem;padding:6px 0}
+#results div,.fav{padding:11px 8px;border-bottom:1px solid var(--line);cursor:pointer;font-size:.9rem}
+#results div small,.fav small{color:var(--dim)}
+.btn{background:var(--acc);color:#06121f;border:none;border-radius:10px;padding:10px 14px;font-weight:700;font-size:.85rem;cursor:pointer}
+.btn.ghost{background:var(--panel2);color:var(--acc);border:1px solid var(--line)}
+.rowbtns{display:flex;gap:8px;margin-top:10px}
+#status{text-align:center;color:var(--dim);padding:30px 10px;font-size:.9rem}
+.err{color:var(--warn)}
+footer{text-align:center;color:var(--dim);font-size:.68rem;padding:20px;line-height:1.5}
+</style>
+</head>
+<body>
+<header>
+  <h1>⛵ Pré<span>Nav</span></h1>
+  <button id="locBtn" onclick="openModal()">📍 escolher local</button>
+  <button id="sosBtn" onclick="openSOS()">🆘 SOS</button>
+</header>
+<nav>
+  <a href="#now">Agora</a><a href="#fcst">Previsão</a><a href="#tide">Maré</a>
+  <a href="#moon">Lua</a><a href="#alm">Almanaque</a><a href="#bul">Boletins</a>
+</nav>
+<main>
+  <div id="status">Escolha um local para começar 📍</div>
+  <div id="app" style="display:none">
+    <section id="now">
+      <div class="wxhero" id="wxHero"></div>
+      <h2>Condições agora <small id="nowStamp"></small></h2><div class="cards" id="nowCards"></div>
+    </section>
+    <section id="fcst"><h2>Previsão 7 dias <small>vento em nós · horas ímpares como no Windguru</small>
+      <select id="modelSel" onchange="setModel()" style="margin-left:auto;background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:4px 8px;font-size:.75rem">
+        <option value="best_match">Melhor modelo (auto)</option>
+        <option value="gfs_seamless">GFS (= Windguru padrão)</option>
+        <option value="ecmwf_ifs025">ECMWF IFS</option>
+        <option value="icon_seamless">ICON (DWD)</option>
+      </select>
+      <select id="cellSel" onchange="setCell()" style="background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:4px 8px;font-size:.75rem">
+        <option value="nearest">Célula: mais próxima</option>
+        <option value="sea">Célula: mar</option>
+        <option value="land">Célula: terra</option>
+      </select></h2>
+      <div class="tblwrap"><table class="wg" id="wgTable"></table></div>
+      <div class="panel" style="margin-top:10px"><canvas id="windChart" height="150"></canvas></div>
+      <p class="note"><a id="rawLink" href="#" target="_blank" style="color:var(--acc)">ver dados brutos da API ↗</a> — útil para comparar com outras fontes.</p>
+    </section>
+    <section id="tide"><h2>Maré <small>altura vs. nível médio (modelo global)</small></h2>
+      <div class="panel"><canvas id="tideChart" height="150"></canvas></div>
+      <div class="tides" id="tideExtremes"></div>
+      <p class="note" id="tideSrc"></p>
+      <p class="note">⚠ Alturas referidas ao nível médio do mar (some ~0,6–0,7 m para comparar com a Tábua DHN, que usa o nível de redução da carta). Para manobra crítica em água rasa, confirme na Tábua oficial da DHN (seção Boletins).</p>
+    </section>
+    <section id="moon"><h2>Lua &amp; Sol</h2>
+      <div class="panel"><div class="moonrow"><div id="moonIcon"></div><div>
+        <b id="moonPhase" style="font-size:1.1rem"></b>
+        <div class="sub" id="moonIllum" style="color:var(--dim);font-size:.85rem"></div>
+        <div class="sub" id="moonNext" style="color:var(--dim);font-size:.8rem;margin-top:4px"></div>
+      </div></div><div class="astrogrid" id="astroGrid"></div></div>
+    </section>
+    <section id="alm"><h2>Almanaque náutico <small>ângulos em UT</small></h2>
+      <div class="panel">
+        <input type="date" id="almDate" onchange="renderAlmanac();starCalc()">
+        <table class="alm" id="almTable"></table>
+        <h2 style="margin-top:18px">Estrelas de navegação</h2>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <select id="starSel" onchange="starCalc()" style="flex:2;min-width:150px;background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:10px;padding:10px"></select>
+          <input type="time" id="starTime" onchange="starCalc()" style="flex:1;min-width:110px;background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:10px;padding:10px;color-scheme:dark">
+        </div>
+        <div class="astrogrid" id="starOut"></div>
+        <p class="note">Posições J2000 (catálogo) precessadas para a data. Hc/Az calculados para o local selecionado — planeje a visada no crepúsculo náutico. Estrelas com movimento próprio alto (Rigil Kent., Arcturus) podem desviar ~1–2'.</p>
+        <p class="note"><b>Como ler:</b> <b>AHar ♈</b> = Ângulo Horário de Áries em Greenwich — some a ARV (SHA) de uma estrela para obter o AHG dela. <b>AHG Sol</b> = Ângulo Horário do Sol em Greenwich — subtraia sua longitude W para obter o ângulo horário local (AHL) usado no triângulo de posição. <b>Dec Sol</b> = declinação do Sol (N/S). Horas em UT (Brasília + 3h). Interpole linearmente entre as linhas (~15°/h no AHar e AHG).</p>
+        <p class="note">⚠ Algoritmo de baixa precisão (erro ≤ ±2'). Para navegação astronômica real, confira com um almanaque oficial (link na seção Boletins).</p>
+      </div>
+    </section>
+    <section id="bul"><h2>Boletins &amp; fontes oficiais <small id="bulArea"></small></h2>
+      <div class="links" id="bulLinks"></div>
+      <h2 style="margin-top:18px">Emergência &amp; SOS</h2>
+      <div class="astrogrid" id="sosBox" style="margin-top:0"></div>
+      <p class="note">⚠ Confirme números, canais e frequências nas publicações oficiais antes de zarpar — contatos e procedimentos mudam. Em socorro real: MAYDAY ×3 no Canal 16, identifique embarcação, posição, natureza do perigo e pessoas a bordo.</p>
+    </section>
+  </div>
+</main>
+<footer>Dados meteorológicos/oceanográficos: Open-Meteo (modelos GFS/ECMWF/MFWAM). Efemérides calculadas localmente.<br>Ferramenta de planejamento — decisões de navegação são responsabilidade do comandante.</footer>
+
+<div id="modal"><div id="modalBox">
+  <input type="text" id="q" placeholder="Cidade, porto ou coordenadas (-23.78, -45.36)" autocomplete="off">
+  <div class="rowbtns">
+    <button class="btn" onclick="doSearch()">Buscar</button>
+    <button class="btn ghost" onclick="useGPS()">Usar GPS</button>
+    <button class="btn ghost" onclick="closeModal()" style="margin-left:auto">Fechar</button>
+  </div>
+  <div id="results"></div>
+  <div id="favs"></div>
+</div></div>
+<div id="sosModal" onclick="if(event.target===this)closeSOS()"><div id="sosMBox">
+  <h3>🆘 EMERGÊNCIA NO MAR</h3>
+  <p class="note" id="sosMArea" style="margin:0"></p>
+  <div id="sosPhone"></div>
+  <div class="sosStep"><div class="sosNum">1</div><p><b>Ligue o rádio VHF</b> (aparelho com microfone de mão, perto do leme). Se houver uma tampa vermelha escrito <b>DISTRESS</b>, levante e <b>segure o botão 5 segundos</b> — isso já envia o pedido de socorro automático.</p></div>
+  <div class="sosStep"><div class="sosNum">2</div><p>Coloque no <b>Canal 16</b> (botões de canal ▲▼ até aparecer "16" no visor). Volume no máximo.</p></div>
+  <div class="sosStep"><div class="sosNum">3</div><p><b>Aperte e segure o botão na lateral do microfone</b> para falar. Solte para ouvir a resposta. Leia em voz alta, devagar:</p></div>
+  <div class="sosScript" id="sosScript"></div>
+  <button class="btn" style="width:100%" onclick="sosFillGPS()">📡 Atualizar posição pelo GPS do celular</button>
+  <div class="sosStep"><div class="sosNum">4</div><p><b>Solte o botão e aguarde 1 minuto.</b> Se ninguém responder, repita a mensagem. Continue repetindo a cada poucos minutos.</p></div>
+  <div class="sosStep"><div class="sosNum">5</div><p>Se houver <b>EPIRB</b> a bordo (boia amarela/laranja de emergência), <b>ative-a</b> conforme a etiqueta e mantenha-a junto ao grupo. Vistam coletes. Só abandone o barco em último caso.</p></div>
+  <details><summary>Dados da embarcação e contatos técnicos ▾</summary>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <input type="text" id="boatName" placeholder="Nome da embarcação" onchange="saveBoat()">
+      <input type="text" id="boatDesc" placeholder="Tipo / modelo" onchange="saveBoat()">
+    </div>
+    <div class="astrogrid" id="sosMGrid" style="margin-top:6px"></div>
+    <p class="note" style="margin-top:8px">Urgência sem perigo imediato de vida: use <b>PAN-PAN ×3</b> em vez de MAYDAY, no mesmo Canal 16.</p>
+  </details>
+  <div class="rowbtns"><button class="btn ghost" onclick="closeSOS()" style="margin-left:auto">Fechar</button></div>
+</div></div>
+
+<script>
+"use strict";
+/* ---------- estado ---------- */
+let loc = JSON.parse(localStorage.getItem('pn_loc')||'null');
+let model = localStorage.getItem('pn_model')||'best_match';
+function setModel(){model=$('modelSel').value;localStorage.setItem('pn_model',model);loadAll();}
+let cell = localStorage.getItem('pn_cell')||'nearest';
+function setCell(){cell=$('cellSel').value;localStorage.setItem('pn_cell',cell);loadAll();}
+let favs = JSON.parse(localStorage.getItem('pn_favs')||'[]');
+let FC=null, MR=null, tideChart=null, windChart=null;
+
+/* ---------- util ---------- */
+const $=id=>document.getElementById(id);
+const rad=Math.PI/180, deg=180/Math.PI;
+const fmtT=(d)=>new Intl.DateTimeFormat('pt-BR',{hour:'2-digit',minute:'2-digit',timeZone:loc.tz}).format(d);
+const fmtD=(d)=>new Intl.DateTimeFormat('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit',timeZone:loc.tz}).format(d);
+const compass=d=>['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSO','SO','OSO','O','ONO','NO','NNO'][Math.round(d/22.5)%16];
+const arrow=d=>`<span class="arrow" style="transform:rotate(${d}deg)">↓</span>`;
+function windColor(k){ if(k==null)return'#334155';
+  const s=[[0,'#e2f3ff'],[5,'#bfe8ff'],[8,'#9fdcae'],[12,'#6fd087'],[16,'#f7e967'],[20,'#f7b955'],[25,'#f2803f'],[30,'#e8453c'],[35,'#c026d3'],[45,'#7c3aed']];
+  for(let i=s.length-1;i>=0;i--) if(k>=s[i][0]) return s[i][1]; return s[0][1];}
+function waveColor(h){ if(h==null)return'#334155';
+  const s=[[0,'#e2f3ff'],[0.5,'#a5d8ff'],[1,'#74c0fc'],[1.5,'#4dabf7'],[2,'#339af0'],[2.5,'#1c7ed6'],[3.5,'#1864ab'],[5,'#7c3aed']];
+  let c=s[0][1]; for(const[v,col]of s) if(h>=v)c=col; return c;}
+function txtOn(bg){return ['#1c7ed6','#1864ab','#e8453c','#c026d3','#7c3aed','#f2803f'].includes(bg)?'#fff':'#0b1929';}
+const dgm=x=>{x=((x%360)+360)%360;const g=Math.floor(x),m=(x-g)*60;return `${String(g).padStart(3,'0')}°${m.toFixed(1).padStart(4,'0')}'`;};
+const dgmDec=x=>{const s=x<0?'S':'N';x=Math.abs(x);const g=Math.floor(x);return `${s}${String(g).padStart(2,'0')}°${((x-g)*60).toFixed(1).padStart(4,'0')}'`;};
+
+/* ---------- astronomia (adaptado de SunCalc, baixa precisão) ---------- */
+const J2000=946728000000, e_=rad*23.4397;
+const toDays=ms=>(ms-J2000)/86400000;
+function sunCoords(d){const M=rad*(357.5291+0.98560028*d);
+  const C=rad*(1.9148*Math.sin(M)+0.02*Math.sin(2*M)+0.0003*Math.sin(3*M));
+  const L=M+C+rad*102.9372+Math.PI;
+  return {ra:Math.atan2(Math.sin(L)*Math.cos(e_),Math.cos(L)),dec:Math.asin(Math.sin(e_)*Math.sin(L))};}
+function moonCoords(d){const L=rad*(218.316+13.176396*d),M=rad*(134.963+13.064993*d),F=rad*(93.272+13.229350*d);
+  const l=L+rad*6.289*Math.sin(M),b=rad*5.128*Math.sin(F),dt=385001-20905*Math.cos(M);
+  return {ra:Math.atan2(Math.sin(l)*Math.cos(e_)-Math.tan(b)*Math.sin(e_),Math.cos(l)),
+          dec:Math.asin(Math.sin(b)*Math.cos(e_)+Math.cos(b)*Math.sin(e_)*Math.sin(l)),dist:dt};}
+const gmstDeg=d=>((280.16+360.9856235*d)%360+360)%360;
+function altitude(ms,latDeg,lonDeg,body){const d=toDays(ms),c=body==='sun'?sunCoords(d):moonCoords(d);
+  const H=rad*(gmstDeg(d)+lonDeg)-c.ra, phi=rad*latDeg;
+  return deg*Math.asin(Math.sin(phi)*Math.sin(c.dec)+Math.cos(phi)*Math.cos(c.dec)*Math.cos(H));}
+function moonIllum(ms){const d=toDays(ms),s=sunCoords(d),m=moonCoords(d),sdist=149598000;
+  const phi=Math.acos(Math.sin(s.dec)*Math.sin(m.dec)+Math.cos(s.dec)*Math.cos(m.dec)*Math.cos(s.ra-m.ra));
+  const inc=Math.atan2(sdist*Math.sin(phi),m.dist-sdist*Math.cos(phi));
+  const ang=Math.atan2(Math.cos(s.dec)*Math.sin(s.ra-m.ra),Math.sin(s.dec)*Math.cos(m.dec)-Math.cos(s.dec)*Math.sin(m.dec)*Math.cos(s.ra-m.ra));
+  return {frac:(1+Math.cos(inc))/2, phase:0.5+0.5*inc*(ang<0?-1:1)/Math.PI};}
+function phaseName(p){const n=['Lua Nova','Crescente Côncava','Quarto Crescente','Crescente Gibosa','Lua Cheia','Minguante Gibosa','Quarto Minguante','Minguante Côncava'];
+  return n[Math.floor(((p+1/16)%1)*8)];}
+function phaseIcon(p){return ['🌑','🌒','🌓','🌔','🌕','🌖','🌗','🌘'][Math.floor(((p+1/16)%1)*8)];}
+/* eventos de nascer/pôr: varre o dia local em passos de 5 min */
+function riseSet(dayStartMs,latDeg,lonDeg,body,h0){
+  const ev={rise:null,set:null};let prev=altitude(dayStartMs,latDeg,lonDeg,body)-h0;
+  for(let t=dayStartMs+300000;t<=dayStartMs+86400000;t+=300000){
+    const cur=altitude(t,latDeg,lonDeg,body)-h0;
+    if(prev<=0&&cur>0&&!ev.rise) ev.rise=t-300000*cur/(cur-prev);
+    if(prev>=0&&cur<0&&!ev.set) ev.set=t-300000*cur/(cur-prev);
+    prev=cur;}
+  return ev;}
+
+/* ---------- maré harmônica (constantes IO-USP: Mesquita & Harari 1983, fases Greenwich) ---------- */
+/* Constituintes: [nτ, ns, nh, np, np1, χ(graus), grupo nodal] */
+const CONST_DEF={
+  Sa:[0,0,1,0,0,0,'1'], Ssa:[0,0,2,0,0,0,'1'], Mtm:[0,3,0,-1,0,0,'Mf'],
+  Q1:[1,-2,0,1,0,-90,'O1'], O1:[1,-1,0,0,0,-90,'O1'], P1:[1,1,-2,0,0,-90,'1'], K1:[1,1,0,0,0,90,'K1'],
+  '2N2':[2,-2,0,2,0,0,'M2'], MU2:[2,-2,2,0,0,0,'M2'], N2:[2,-1,0,1,0,0,'M2'], M2:[2,0,0,0,0,0,'M2'],
+  L2:[2,1,0,-1,0,180,'M2'], S2:[2,2,-2,0,0,0,'1'], K2:[2,2,0,0,0,0,'K2'],
+  MO3:[3,-1,0,0,0,-90,'M2O1'], M3:[3,0,0,0,0,0,'M3'], MK3:[3,1,0,0,0,90,'M2K1'], SO3:[3,1,-2,0,0,-90,'O1'],
+  MN4:[4,-1,0,1,0,0,'M2M2'], M4:[4,0,0,0,0,0,'M2M2'], MS4:[4,2,-2,0,0,0,'M2'], MK4:[4,2,0,0,0,0,'M2K2']};
+const TIDE_STATIONS=[
+  {name:'Ubatuba (IO-USP)',lat:-23.50,lon:-45.12,
+   C:{Sa:[.079,37.4],Ssa:[.033,109.2],Mtm:[.035,179.1],Q1:[.031,94.2],O1:[.109,125.4],P1:[.020,178.1],K1:[.059,187.1],
+      '2N2':[.014,224.0],MU2:[.015,175.2],N2:[.037,216.4],M2:[.297,165.9],L2:[.014,184.1],S2:[.172,171.6],K2:[.054,164.1],
+      MO3:[.010,138.1],M3:[.014,341.7],MN4:[.022,133.5],M4:[.055,185.7],MS4:[.028,277.6]}},
+  {name:'Cananéia (IO-USP)',lat:-25.02,lon:-47.93,
+   C:{Sa:[.057,27.3],Ssa:[.053,96.8],Mtm:[.047,157.6],Q1:[.031,101.2],O1:[.110,123.4],P1:[.023,191.6],K1:[.065,190.6],
+      '2N2':[.019,239.1],MU2:[.023,235.7],N2:[.056,247.1],M2:[.366,179.2],L2:[.023,190.6],S2:[.237,184.2],K2:[.076,175.3],
+      MO3:[.053,150.4],M3:[.081,4.2],MK3:[.027,270.6],SO3:[.022,283.4],MN4:[.034,329.7],M4:[.070,21.9],MS4:[.035,131.4],MK4:[.010,133.7]}}];
+function astroArgs(ms){const D=(ms-J2000)/86400000;
+  return {tau:360*D+(280.4661+0.98564736*D)-(218.3164+13.17639648*D),
+    s:218.3164+13.17639648*D, h:280.4661+0.98564736*D, p:83.3535+0.11140353*D,
+    N:125.0445-0.05295377*D, p1:282.9384+0.00004707*D};}
+function nodal(key,Nrad){const cN=Math.cos(Nrad),c2=Math.cos(2*Nrad),c3=Math.cos(3*Nrad),
+  sN=Math.sin(Nrad),s2=Math.sin(2*Nrad),s3=Math.sin(3*Nrad);
+  const M2={f:1.0004-0.0373*cN+0.0002*c2,u:-2.14*sN},
+        O1={f:1.0089+0.1871*cN-0.0147*c2+0.0014*c3,u:10.80*sN-1.34*s2+0.19*s3},
+        K1={f:1.0060+0.1150*cN-0.0088*c2+0.0006*c3,u:-8.86*sN+0.68*s2-0.07*s3},
+        K2={f:1.0241+0.2863*cN+0.0083*c2-0.0015*c3,u:-17.74*sN+0.68*s2-0.04*s3},
+        Mf={f:1.043+0.414*cN,u:-23.74*sN+2.68*s2-0.38*s3};
+  switch(key){case'M2':return M2;case'O1':return O1;case'K1':return K1;case'K2':return K2;case'Mf':return Mf;
+    case'M3':return{f:Math.pow(M2.f,1.5),u:1.5*M2.u};
+    case'M2M2':return{f:M2.f*M2.f,u:2*M2.u};
+    case'M2O1':return{f:M2.f*O1.f,u:M2.u+O1.u};
+    case'M2K1':return{f:M2.f*K1.f,u:M2.u+K1.u};
+    case'M2K2':return{f:M2.f*K2.f,u:M2.u+K2.u};
+    default:return{f:1,u:0};}}
+function tideHeight(st,ms){const a=astroArgs(ms),Nr=rad*a.N;let hgt=0;
+  for(const nm in st.C){const d=CONST_DEF[nm];if(!d)continue;
+    const V=d[0]*a.tau+d[1]*a.s+d[2]*a.h+d[3]*a.p+d[4]*a.p1+d[5];
+    const{f,u}=nodal(d[6],Nr);
+    hgt+=f*st.C[nm][0]*Math.cos(rad*(V+u-st.C[nm][1]));}
+  return hgt;}
+function nearestStation(lat,lon){let best=null,bd=1e9;
+  for(const s of TIDE_STATIONS){
+    const d=6371*Math.acos(Math.min(1,Math.sin(rad*lat)*Math.sin(rad*s.lat)+Math.cos(rad*lat)*Math.cos(rad*s.lat)*Math.cos(rad*(lon-s.lon))));
+    if(d<bd){bd=d;best=s;}}
+  return bd<=250?{st:best,km:bd}:null;}
+
+/* ---------- localização ---------- */
+function openModal(){$('modal').classList.add('open');renderFavs();$('q').focus();}
+function closeModal(){$('modal').classList.remove('open');}
+$('q').addEventListener('keydown',e=>{if(e.key==='Enter')doSearch();});
+async function doSearch(){
+  const q=$('q').value.trim(); if(!q)return;
+  const co=q.match(/^\s*(-?\d+(?:[.,]\d+)?)\s*[,;\s]\s*(-?\d+(?:[.,]\d+)?)\s*$/);
+  if(co){const la=parseFloat(co[1].replace(',','.')),lo=parseFloat(co[2].replace(',','.'));
+    if(Math.abs(la)<=90&&Math.abs(lo)<=180){
+      setLoc({name:`${la.toFixed(3)}, ${lo.toFixed(3)}`,lat:la,lon:lo,tz:Intl.DateTimeFormat().resolvedOptions().timeZone});return;}}
+  $('results').innerHTML='<div>Buscando…</div>';
+  try{
+    const r=await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=6&language=pt&format=json`);
+    const j=await r.json();
+    $('results').innerHTML=(j.results||[]).map((p,i)=>
+      `<div onclick='pickResult(${i})'>${p.name} <small>${p.admin1||''} · ${p.country||''}</small></div>`).join('')||'<div>Nada encontrado</div>';
+    window._res=j.results||[];
+  }catch(e){$('results').innerHTML=`<div class="err">Erro na busca: ${e.message}<br><small>Sem acesso à internet? Este app precisa ser aberto num navegador (Chrome/Safari) com conexão — a pré-visualização do Claude bloqueia rede.</small></div>`;}
+}
+function pickResult(i){const p=window._res[i];setLoc({name:p.name+(p.admin1?', '+p.admin1:''),lat:p.latitude,lon:p.longitude,tz:p.timezone||'America/Sao_Paulo'});}
+function useGPS(){
+  if(!navigator.geolocation)return alert('GPS indisponível');
+  navigator.geolocation.getCurrentPosition(p=>{
+    setLoc({name:`GPS ${p.coords.latitude.toFixed(3)}, ${p.coords.longitude.toFixed(3)}`,lat:p.coords.latitude,lon:p.coords.longitude,tz:Intl.DateTimeFormat().resolvedOptions().timeZone});
+  },()=>alert('Não foi possível obter a posição'));}
+function setLoc(l){
+  loc=l;localStorage.setItem('pn_loc',JSON.stringify(l));
+  if(!favs.some(f=>f.name===l.name)){favs.unshift(l);favs=favs.slice(0,6);localStorage.setItem('pn_favs',JSON.stringify(favs));}
+  closeModal();loadAll();}
+function renderFavs(){
+  $('favs').innerHTML=favs.length?'<p class="note" style="margin-top:12px">Recentes:</p>'+
+    favs.map((f,i)=>`<div class="fav" onclick='setLoc(${JSON.stringify(f)})'>⭐ ${f.name}</div>`).join(''):'';}
+
+/* ---------- dados ---------- */
+async function loadAll(){
+  $('locBtn').innerHTML='📍 <b>'+loc.name+'</b>';
+  $('status').style.display='block';$('status').textContent='Carregando dados…';$('app').style.display='none';
+  const fURL=`https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&hourly=temperature_2m,precipitation,cloud_cover,pressure_msl,wind_speed_10m,wind_gusts_10m,wind_direction_10m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,wind_speed_10m_max&timezone=auto&forecast_days=7&wind_speed_unit=kn&models=${model}&cell_selection=${cell}`;
+  window._fURL=fURL;
+  const mURL=`https://marine-api.open-meteo.com/v1/marine?latitude=${loc.lat}&longitude=${loc.lon}&hourly=wave_height,wave_direction,wave_period,swell_wave_height,swell_wave_direction,swell_wave_period,sea_surface_temperature,sea_level_height_msl&timezone=auto&forecast_days=7`;
+  try{
+    const [fr,mr]=await Promise.allSettled([fetch(fURL).then(r=>r.json()),fetch(mURL).then(r=>r.json())]);
+    if(fr.status!=='fulfilled'||fr.value.error) throw new Error('previsão indisponível');
+    FC=fr.value; MR=(mr.status==='fulfilled'&&!mr.value.error)?mr.value:null;
+    loc.tz=FC.timezone||loc.tz; loc.off=FC.utc_offset_seconds;
+    localStorage.setItem('pn_loc',JSON.stringify(loc));
+    localStorage.setItem('pn_cache',JSON.stringify({FC,MR,when:Date.now(),loc}));
+    render();
+  }catch(e){
+    const c=JSON.parse(localStorage.getItem('pn_cache')||'null');
+    if(c&&c.loc.name===loc.name){FC=c.FC;MR=c.MR;render();
+      $('nowStamp').textContent='(offline — dados de '+fmtT(new Date(c.when))+')';}
+    else{$('status').innerHTML=`<span class="err">Erro ao carregar dados: ${e.message}</span><br><small>Verifique a conexão. Se estiver na pré-visualização do Claude, abra o arquivo num navegador (Chrome/Safari) — a pré-visualização bloqueia rede.</small>`;}
+  }
+}
+const hIdx=()=>{const now=Date.now();let i=FC.hourly.time.findIndex(t=>new Date(t+':00'+offStr()).getTime()>=now);return Math.max(0,i-1);};
+const offStr=()=>{const o=loc.off||0,s=o<0?'-':'+',a=Math.abs(o);return s+String(Math.floor(a/3600)).padStart(2,'0')+':'+String(Math.floor(a%3600/60)).padStart(2,'0');};
+const hMs=t=>new Date(t+':00'+offStr()).getTime();
+
+/* ---------- render ---------- */
+function render(){
+  $('status').style.display='none';$('app').style.display='block';
+  $('modelSel').value=model;$('cellSel').value=cell;
+  $('rawLink').href=window._fURL||'#';
+  renderWx();renderNow();renderTable();renderWindChart();renderTide();renderMoon();renderBulletins();
+  const d=new Date();
+  $('almDate').value=new Intl.DateTimeFormat('en-CA',{timeZone:loc.tz}).format(d);
+  renderAlmanac();
+  if(!$('starSel').options.length)
+    $('starSel').innerHTML=Object.keys(STARS).map(n=>`<option${n==='Sirius'?' selected':''}>${n}</option>`).join('');
+  if(!$('starTime').value)$('starTime').value=new Intl.DateTimeFormat('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:loc.tz}).format(d);
+  starCalc();
+}
+/* ---------- widget estilo iOS ---------- */
+function wmo(code,night){
+  const t={0:['Céu limpo',night?'🌙':'☀️'],1:['Predomínio de sol',night?'🌙':'🌤️'],2:['Parcialmente nublado',night?'☁️':'⛅'],3:['Nublado','☁️'],
+    45:['Nevoeiro','🌫️'],48:['Nevoeiro','🌫️'],51:['Garoa fraca','🌦️'],53:['Garoa','🌦️'],55:['Garoa forte','🌧️'],
+    61:['Chuva fraca','🌧️'],63:['Chuva','🌧️'],65:['Chuva forte','🌧️'],66:['Chuva gelada','🌧️'],67:['Chuva gelada','🌧️'],
+    71:['Neve','🌨️'],73:['Neve','🌨️'],75:['Neve','❄️'],77:['Neve','❄️'],
+    80:['Pancadas isoladas','🌦️'],81:['Pancadas','🌧️'],82:['Pancadas fortes','⛈️'],85:['Neve','🌨️'],86:['Neve','🌨️'],
+    95:['Trovoadas','⛈️'],96:['Trovoada c/ granizo','⛈️'],99:['Trovoada c/ granizo','⛈️']};
+  return t[code]||['—','🌡️'];}
+function wxGrad(code,night){
+  if(code>=95)return'linear-gradient(180deg,#2b2f45,#4a4f6b)';
+  if(code>=61||code===55)return night?'linear-gradient(180deg,#26303d,#42505f)':'linear-gradient(180deg,#3a4a5c,#5c6f83)';
+  if(code>=45)return night?'linear-gradient(180deg,#2a3038,#4a525c)':'linear-gradient(180deg,#7d8a96,#a3aeb8)';
+  if(code>=2)return night?'linear-gradient(180deg,#232b38,#3a4656)':'linear-gradient(180deg,#5c7691,#8ba3ba)';
+  return night?'linear-gradient(180deg,#0b1a3a,#25355e)':'linear-gradient(180deg,#2f80c7,#6db3e8)';}
+function isNightAt(ms){
+  if(FC.daily&&FC.daily.sunrise){
+    for(let d=0;d<FC.daily.sunrise.length;d++){
+      const sr=hMs(FC.daily.sunrise[d]),ss=hMs(FC.daily.sunset[d]);
+      if(ms>=sr&&ms<=ss)return false;}
+    return true;}
+  return altitude(ms,loc.lat,loc.lon,'sun')<0;}
+function renderWx(){
+  const h=FC.hourly,i=hIdx(),now=Date.now(),night=isNightAt(now);
+  const code=h.weather_code?h.weather_code[i]:3,[desc,icon]=wmo(code,night);
+  const d0=FC.daily||{};
+  const hi=d0.temperature_2m_max?Math.round(d0.temperature_2m_max[0]):null;
+  const lo=d0.temperature_2m_min?Math.round(d0.temperature_2m_min[0]):null;
+  const m=MR?MR.hourly:null;
+  let chips=`<span>💨 ${Math.round(h.wind_speed_10m[i])} kt ${compass(h.wind_direction_10m[i])}</span>`+
+            `<span>💥 raj. ${Math.round(h.wind_gusts_10m[i])} kt</span>`;
+  if(m&&m.wave_height&&m.wave_height[i]!=null)chips+=`<span>🌊 ${m.wave_height[i].toFixed(1)} m</span>`;
+  if(m&&m.sea_surface_temperature&&m.sea_surface_temperature[i]!=null)chips+=`<span>🌡️ água ${m.sea_surface_temperature[i].toFixed(0)}°</span>`;
+  let strip='';
+  for(let k=i;k<Math.min(i+24,h.time.length);k++){
+    const ms=hMs(h.time[k]),nt=isNightAt(ms),[,ic]=wmo(h.weather_code?h.weather_code[k]:3,nt);
+    strip+=`<div class="wh">${k===i?'Agora':h.time[k].slice(11,13)+'h'}<span class="ic">${ic}</span><b>${Math.round(h.temperature_2m[k])}°</b><div class="wk">${Math.round(h.wind_speed_10m[k])} kt</div></div>`;}
+  /* previsão diária estilo iOS */
+  let daysHtml='';
+  if(d0.time&&d0.temperature_2m_max){
+    const wmin=Math.min(...d0.temperature_2m_min),wmax=Math.max(...d0.temperature_2m_max),span=Math.max(1,wmax-wmin);
+    const wd=new Intl.DateTimeFormat('pt-BR',{weekday:'short',timeZone:loc.tz});
+    daysHtml='<div class="wxdays">';
+    for(let d=0;d<d0.time.length;d++){
+      const nm=d===0?'Hoje':wd.format(new Date(d0.time[d]+'T12:00'+offStr())).replace('.','');
+      const[,ic]=wmo(d0.weather_code?d0.weather_code[d]:3,false);
+      const tmin=d0.temperature_2m_min[d],tmax=d0.temperature_2m_max[d];
+      const left=(tmin-wmin)/span*100,width=Math.max(4,(tmax-tmin)/span*100);
+      const wmaxk=d0.wind_speed_10m_max?`<span class="wk">💨 ${Math.round(d0.wind_speed_10m_max[d])} kt</span>`:'';
+      daysHtml+=`<div class="wd" onclick="toggleDay(${d})"><span class="dn">${nm}</span><span class="ic">${ic}</span>`+
+        `<span class="lo">${Math.round(tmin)}°</span><span class="bar"><i style="left:${left}%;width:${width}%"></i></span>`+
+        `<span class="hi">${Math.round(tmax)}°</span>${wmaxk}</div><div class="wdd" id="wdd${d}"></div>`;}
+    daysHtml+='</div>';}
+  const el=$('wxHero');
+  el.style.background=wxGrad(code,night);
+  el.innerHTML=`<div class="wxloc">📍 ${loc.name}</div><div class="wxtemp">${Math.round(h.temperature_2m[i])}°</div>`+
+    `<div class="wxdesc">${icon} ${desc}</div>`+
+    (hi!=null?`<div class="wxhl">Máx. ${hi}° · Mín. ${lo}°</div>`:'')+
+    `<div class="wxchips">${chips}</div><div class="wxstrip">${strip}</div>${daysHtml}`;
+}
+function toggleDay(d){
+  const box=$('wdd'+d);if(!box)return;
+  if(box.classList.contains('open')){box.classList.remove('open');return;}
+  document.querySelectorAll('.wdd.open').forEach(e=>e.classList.remove('open'));
+  if(!box.innerHTML){
+    const h=FC.hourly;let s='<div class="wxstrip">';
+    for(let k=d*24;k<Math.min((d+1)*24,h.time.length);k+=2){
+      const ms=hMs(h.time[k]),nt=isNightAt(ms),[,ic]=wmo(h.weather_code?h.weather_code[k]:3,nt);
+      const pr=h.precipitation[k];
+      s+=`<div class="wh">${h.time[k].slice(11,13)}h<span class="ic">${ic}</span><b>${Math.round(h.temperature_2m[k])}°</b>`+
+         `<div class="wk">${Math.round(h.wind_speed_10m[k])}–${Math.round(h.wind_gusts_10m[k])} kt</div>`+
+         `<span class="pr">${pr>0.1?'💧'+pr.toFixed(1):''}</span></div>`;}
+    box.innerHTML=s+'</div>';}
+  box.classList.add('open');
+}
+function renderNow(){
+  const h=FC.hourly,i=hIdx(),m=MR?MR.hourly:null;
+  $('nowStamp').textContent=`· ${loc.name} (${loc.lat.toFixed(3)}, ${loc.lon.toFixed(3)}) · ${fmtT(new Date())}`;
+  const cards=[
+    ['Vento',`${Math.round(h.wind_speed_10m[i])} <small>kt ${compass(h.wind_direction_10m[i])}</small>`,`rajadas ${Math.round(h.wind_gusts_10m[i])} kt`],
+    ['Temperatura',`${h.temperature_2m[i].toFixed(0)} <small>°C</small>`,`nuvens ${h.cloud_cover[i]}%`],
+    ['Pressão',`${Math.round(h.pressure_msl[i])} <small>hPa</small>`,tendPressao(h,i)],
+    ['Chuva',`${h.precipitation[i].toFixed(1)} <small>mm/h</small>`,''],
+  ];
+  if(m&&m.wave_height&&m.wave_height[i]!=null){
+    cards.push(['Ondas',`${m.wave_height[i].toFixed(1)} <small>m ${compass(m.wave_direction[i])}</small>`,`período ${m.wave_period[i]?.toFixed(0)??'–'} s`]);
+    if(m.sea_surface_temperature&&m.sea_surface_temperature[i]!=null)
+      cards.push(['Água',`${m.sea_surface_temperature[i].toFixed(1)} <small>°C</small>`,'temp. superfície']);
+  }
+  $('nowCards').innerHTML=cards.map(c=>`<div class="card"><div class="lbl">${c[0]}</div><div class="val">${c[1]}</div><div class="sub">${c[2]}</div></div>`).join('');
+}
+function tendPressao(h,i){if(i<3)return'';const d=h.pressure_msl[i]-h.pressure_msl[i-3];
+  return d<=-2?'▼ caindo rápido ⚠':d<-0.5?'▼ caindo':d>=2?'▲ subindo rápido':d>0.5?'▲ subindo':'— estável';}
+function renderTable(){
+  const h=FC.hourly,m=MR?MR.hourly:null,step=2,n=h.time.length;
+  let rDay='<th></th>',rHr='<th>Hora</th>',rDir='<th>Direção</th>',rWs='<th>Vento (kt)</th>',rGu='<th>Rajada (kt)</th>',
+      rT='<th>Temp (°C)</th>',rP='<th>Chuva (mm)</th>',rC='<th>Nuvens (%)</th>',
+      rWv='<th>Onda (m)</th>',rWp='<th>Período (s)</th>',rWd='<th>Dir. onda</th>';
+  let lastDay='';
+  for(let i=1;i<n;i+=step){
+    const dt=new Date(hMs(h.time[i]));const dstr=fmtD(dt);
+    const nd=dstr!==lastDay;lastDay=dstr;
+    rDay+=nd?`<td class="day" colspan="${Math.min(12,Math.ceil((n-i)/step))}">${dstr}</td>`:'';
+    const hr=h.time[i].slice(11,13);
+    rHr+=`<td class="hd">${hr}</td>`;
+    rDir+=`<td class="plain">${arrow(h.wind_direction_10m[i])}</td>`;
+    const ws=h.wind_speed_10m[i],gu=h.wind_gusts_10m[i];
+    rWs+=`<td style="background:${windColor(ws)};color:${txtOn(windColor(ws))}">${Math.round(ws)}</td>`;
+    rGu+=`<td style="background:${windColor(gu)};color:${txtOn(windColor(gu))}">${Math.round(gu)}</td>`;
+    rT+=`<td class="plain">${Math.round(h.temperature_2m[i])}</td>`;
+    const pr=h.precipitation[i];
+    rP+=`<td class="plain" style="${pr>0.2?'color:#4dabf7;font-weight:700':''}">${pr>0?pr.toFixed(1):''}</td>`;
+    rC+=`<td class="plain">${h.cloud_cover[i]}</td>`;
+    if(m&&m.wave_height){
+      const wv=m.wave_height[i];
+      rWv+=`<td style="background:${waveColor(wv)};color:${txtOn(waveColor(wv))}">${wv!=null?wv.toFixed(1):'–'}</td>`;
+      rWp+=`<td class="plain">${m.wave_period[i]!=null?Math.round(m.wave_period[i]):'–'}</td>`;
+      rWd+=`<td class="plain">${m.wave_direction[i]!=null?arrow(m.wave_direction[i]):'–'}</td>`;
+    }
+  }
+  let html=`<tr>${rDay}</tr><tr>${rHr}</tr><tr>${rDir}</tr><tr>${rWs}</tr><tr>${rGu}</tr><tr>${rT}</tr><tr>${rP}</tr><tr>${rC}</tr>`;
+  if(m&&m.wave_height) html+=`<tr>${rWv}</tr><tr>${rWp}</tr><tr>${rWd}</tr>`;
+  $('wgTable').innerHTML=html;
+}
+function chartOpts(unit){return{responsive:true,plugins:{legend:{labels:{color:'#7fa1c0',boxWidth:12,font:{size:10}}}},
+  scales:{x:{ticks:{color:'#7fa1c0',maxTicksLimit:8,font:{size:9}},grid:{color:'#1e3a55'}},
+          y:{ticks:{color:'#7fa1c0',font:{size:9}},grid:{color:'#1e3a55'},title:{display:true,text:unit,color:'#7fa1c0'}}}};}
+function renderWindChart(){
+  if(!window.Chart)return;const h=FC.hourly,lab=[],ws=[],gu=[];
+  for(let i=1;i<h.time.length;i+=2){lab.push(fmtD(new Date(hMs(h.time[i])))+' '+h.time[i].slice(11,13)+'h');ws.push(h.wind_speed_10m[i]);gu.push(h.wind_gusts_10m[i]);}
+  if(windChart)windChart.destroy();
+  windChart=new Chart($('windChart'),{type:'line',data:{labels:lab,datasets:[
+    {label:'Vento (kt)',data:ws,borderColor:'#38bdf8',backgroundColor:'rgba(56,189,248,.15)',fill:true,pointRadius:0,tension:.3},
+    {label:'Rajada (kt)',data:gu,borderColor:'#fbbf24',borderDash:[4,3],pointRadius:0,tension:.3}]},options:chartOpts('kt')});
+}
+function renderTide(){
+  const near=nearestStation(loc.lat,loc.lon);
+  const hasModel=MR&&MR.hourly.sea_level_height_msl&&!MR.hourly.sea_level_height_msl.every(v=>v==null);
+  if(!near&&!hasModel){
+    $('tide').querySelector('.panel').innerHTML='<p class="note">Sem dados de maré para este ponto. Use a Tábua de Marés da DHN na seção Boletins.</p>';
+    $('tideExtremes').innerHTML='';$('tideSrc').textContent='';return;}
+  const start=Date.now()-3*3600000, HOURS=72, lab=[], harm=[], mod=[];
+  /* série harmônica a cada 20 min */
+  if(near){for(let k=0;k<=HOURS*3;k++)harm.push(tideHeight(near.st,start+k*1200000));}
+  /* série do modelo global (horária) reamostrada nos mesmos instantes */
+  if(hasModel){const t=MR.hourly.time,s=MR.hourly.sea_level_height_msl,t0=hMs(t[0]);
+    for(let k=0;k<=HOURS*3;k++){const x=(start+k*1200000-t0)/3600000,i=Math.floor(x);
+      mod.push(s[i]!=null&&s[i+1]!=null?s[i]+(s[i+1]-s[i])*(x-i):null);}}
+  for(let k=0;k<=HOURS*3;k++){const d=new Date(start+k*1200000);
+    lab.push(k%9===0?fmtD(d)+' '+fmtT(d):'');}
+  if(window.Chart){
+    const ds=[];
+    if(near)ds.push({label:'Harmônica · '+near.st.name,data:harm,borderColor:'#fbbf24',pointRadius:0,tension:.3,borderWidth:2});
+    if(hasModel)ds.push({label:'Modelo global (Open-Meteo)',data:mod,borderColor:'#38bdf8',backgroundColor:'rgba(56,189,248,.15)',fill:true,pointRadius:0,tension:.3,borderWidth:1.5});
+    if(tideChart)tideChart.destroy();
+    tideChart=new Chart($('tideChart'),{type:'line',data:{labels:lab,datasets:ds},options:chartOpts('m (vs. nível médio)')});
+  }
+  /* extremos: preferir série harmônica (20 min de resolução) */
+  const src=near?harm:mod, stepMs=1200000, ext=[];
+  for(let k=1;k<src.length-1&&ext.length<12;k++){
+    if(src[k]==null||src[k-1]==null||src[k+1]==null)continue;
+    const isMax=src[k]>=src[k-1]&&src[k]>src[k+1],isMin=src[k]<=src[k-1]&&src[k]<src[k+1];
+    if(isMax||isMin)ext.push({ms:start+k*stepMs,hgt:src[k],hi:isMax});}
+  $('tideExtremes').innerHTML=ext.map(e=>
+    `<div class="tide"><span class="${e.hi?'hi':'lo'}">${e.hi?'▲ Preamar':'▼ Baixa-mar'}</span><br><b>${fmtT(new Date(e.ms))}</b> · ${e.hgt.toFixed(2)} m<br><small style="color:var(--dim)">${fmtD(new Date(e.ms))}</small></div>`).join('');
+  $('tideSrc').innerHTML=near
+    ?`Extremos pela previsão harmônica — estação <b>${near.st.name}</b> a ${near.km.toFixed(0)} km (constantes Mesquita &amp; Harari/IO-USP, fases Greenwich). Alturas vs. nível médio.`
+    :'Extremos pelo modelo global Open-Meteo (sem estação harmônica próxima).';
+}
+function renderMoon(){
+  const now=Date.now(),il=moonIllum(now);
+  $('moonIcon').textContent=phaseIcon(il.phase);
+  $('moonPhase').textContent=phaseName(il.phase);
+  $('moonIllum').textContent=`Iluminação: ${(il.frac*100).toFixed(0)}%`;
+  let nova=null,cheia=null;
+  for(let t=now;t<now+31*86400000;t+=3600000){
+    const p=moonIllum(t).phase,pp=moonIllum(t-3600000).phase;
+    if(!nova&&pp>0.9&&p<0.1)nova=t;
+    if(!cheia&&pp<0.5&&p>=0.5)cheia=t;
+    if(nova&&cheia)break;}
+  $('moonNext').innerHTML=`Próx. cheia: <b>${cheia?fmtD(new Date(cheia)):'–'}</b> · Próx. nova: <b>${nova?fmtD(new Date(nova)):'–'}</b>`;
+  const dayStart=localMidnight(new Date());
+  const sun=riseSet(dayStart,loc.lat,loc.lon,'sun',-0.833);
+  const civ=riseSet(dayStart,loc.lat,loc.lon,'sun',-6);
+  const nau=riseSet(dayStart,loc.lat,loc.lon,'sun',-12);
+  const mo=riseSet(dayStart,loc.lat,loc.lon,'moon',0.125);
+  const F=t=>t?fmtT(new Date(t)):'—';
+  $('astroGrid').innerHTML=[
+    ['Nascer do sol',F(sun.rise)],['Pôr do sol',F(sun.set)],
+    ['Crep. civil (manhã)',F(civ.rise)],['Crep. civil (tarde)',F(civ.set)],
+    ['Crep. náutico (manhã)',F(nau.rise)],['Crep. náutico (tarde)',F(nau.set)],
+    ['Nascer da lua',F(mo.rise)],['Pôr da lua',F(mo.set)],
+  ].map(a=>`<div class="astro"><div class="lbl">${a[0]}</div><b>${a[1]}</b></div>`).join('');
+}
+function localMidnight(d){
+  const p=new Intl.DateTimeFormat('en-CA',{timeZone:loc.tz}).format(d).split('-');
+  return Date.UTC(+p[0],+p[1]-1,+p[2])-(loc.off||0)*1000;}
+function renderAlmanac(){
+  const v=$('almDate').value;if(!v)return;
+  const p=v.split('-'),base=Date.UTC(+p[0],+p[1]-1,+p[2]);
+  let rows='<tr><th>UT</th><th>AHar ♈</th><th>AHG Sol</th><th>Dec Sol</th></tr>';
+  for(let h=0;h<24;h+=2){
+    const ms=base+h*3600000,d=toDays(ms),s=sunCoords(d);
+    const gha=gmstDeg(d),ghaSun=((gha-deg*s.ra)%360+360)%360;
+    rows+=`<tr><td>${String(h).padStart(2,'0')}:00</td><td>${dgm(gha)}</td><td>${dgm(ghaSun)}</td><td>${dgmDec(deg*s.dec)}</td></tr>`;}
+  $('almTable').innerHTML=rows;
+}
+
+/* ---------- METAREAs: boletins e SOS por região ---------- */
+const METAREAS=[
+ {id:'V',nome:'Atlântico Sudoeste',coord:'Marinha do Brasil (SMM/CHM)',
+  match:(la,lo)=>la<=7.2&&la>=-35.9&&lo>=-70&&lo<=-20,
+  links:[['Meteoromarinha','Boletim do tempo no mar — Marinha/CHM','https://www.marinha.mil.br/chm/dados-do-smm-boletins-e-previsoes/meteoromarinha'],
+   ['Cartas Sinóticas','Análise de superfície — CHM','https://www.marinha.mil.br/chm/dados-do-smm-cartas-sinoticas/cartas-sinoticas'],
+   ['Avisos de Mau Tempo','Avisos vigentes — SMM','https://www.marinha.mil.br/chm/dados-do-smm-avisos-de-mau-tempo/avisos-de-mau-tempo'],
+   ['Tábuas de Maré (DHN)','Previsões oficiais por porto','https://www.marinha.mil.br/chm/tabuas-de-mare'],
+   ['Ondas CPTEC/INPE','WAVEWATCH III','https://ondas.cptec.inpe.br']],
+  sos:[['SALVAMAR (Marinha)','☎ 185 — Emergências Marítimas'],['MRCC Brasil','+55 21 2104-6119'],
+   ['NAVTEX','518 kHz (avisos em inglês)'],['Meteoromarinha em HF','Rede de Estações Costeiras da Marinha']]},
+ {id:'VI',nome:'Atlântico Sul',coord:'Argentina (SHN)',
+  match:(la,lo)=>la<-35.9&&la>=-60&&lo>=-70&&lo<=-20,
+  links:[['SMARA — Boletins','Serviço de Meteorologia da Armada Argentina','https://www.hidro.gob.ar/smara/'],
+   ['SMN Argentina','Serviço Meteorológico Nacional','https://www.smn.gob.ar/']],
+  sos:[['Prefectura Naval','☎ 106 — Emergência náutica'],['MRCC Argentina','Via VHF 16 / Prefectura']]},
+ {id:'IV',nome:'Atlântico Noroeste, Caribe e Golfo',coord:'EUA (NWS)',
+  match:(la,lo)=>la>7.2&&la<=67&&lo>=-98&&lo<=-35,
+  links:[['Ocean Prediction Center','Boletins e cartas de superfície — NOAA','https://ocean.weather.gov/'],
+   ['National Hurricane Center','Trópicos: furacões e tempestades','https://www.nhc.noaa.gov/'],
+   ['USCG NAVCEN','Avisos aos navegantes','https://www.navcen.uscg.gov/']],
+  sos:[['US Coast Guard','VHF 16 — "Coast Guard"'],['JRCC Norfolk','+1 757 398-6390'],['NOAA Weather Radio','162,400–162,550 MHz']]},
+ {id:'III',nome:'Mediterrâneo e Mar Negro',coord:'Grécia (HNMS) / França',
+  match:(la,lo)=>la>=30&&la<=47.5&&lo>=-6&&lo<=42,
+  links:[['Météo-France Marine','Boletins large e côte','https://meteofrance.com/meteo-marine'],
+   ['Poseidon (Grécia)','Previsão do Egeu/Med Oriental','https://poseidon.hcmr.gr/']],
+  sos:[['Emergência europeia','☎ 112'],['CROSS (França)','☎ 196 ou VHF 16'],['MRCC nacional','Via VHF 16']]},
+ {id:'I',nome:'Atlântico Nordeste',coord:'Reino Unido (Met Office)',
+  match:(la,lo)=>la>48.4&&la<=75&&lo>=-35&&lo<=32,
+  links:[['Shipping Forecast','Met Office — previsão marítima','https://www.metoffice.gov.uk/weather/specialist-forecasts/coast-and-sea/shipping-forecast']],
+  sos:[['HM Coastguard','VHF 16 / ☎ 999 ou 112']]},
+ {id:'II',nome:'Atlântico Leste',coord:'França (Météo-France)',
+  match:(la,lo)=>la>7.2&&la<=48.4&&lo>=-35&&lo<=0,
+  links:[['Météo-France Marine','Boletins large','https://meteofrance.com/meteo-marine']],
+  sos:[['Emergência europeia','☎ 112 (águas europeias)'],['CROSS (França)','☎ 196 ou VHF 16']]},
+ {id:'XVI',nome:'Pacífico Sudeste Norte',coord:'Peru (DHN)',
+  match:(la,lo)=>la<0&&la>=-18.4&&lo<=-70&&lo>=-120,
+  links:[['DHN Peru','Dirección de Hidrografía y Navegación','https://www.dhn.mil.pe/']],
+  sos:[['MRCC Callao','Via VHF 16']]},
+ {id:'XV',nome:'Pacífico Sudeste',coord:'Chile (SMA)',
+  match:(la,lo)=>la<-18.4&&la>=-60&&lo<=-67&&lo>=-131,
+  links:[['Meteo Armada (Chile)','Serviço Meteorológico da Armada','https://meteoarmada.directemar.cl/']],
+  sos:[['DIRECTEMAR','☎ 137 — Emergência marítima'],['MRCC Chile','Via VHF 16']]},
+ {id:'XII',nome:'Pacífico Leste Norte',coord:'EUA (NWS)',
+  match:(la,lo)=>la>=0&&la<=67&&lo<-98&&lo>=-180,
+  links:[['OPC — Pacífico','Boletins NOAA','https://ocean.weather.gov/Pac_tab.php'],
+   ['NHC — Pacífico Leste','Trópicos','https://www.nhc.noaa.gov/']],
+  sos:[['US Coast Guard','VHF 16'],['JRCC Alameda','+1 510 437-3701']]},
+ {id:'VII',nome:'Atlântico Sul-Leste / Índico SW',coord:'África do Sul (SAWS)',
+  match:(la,lo)=>la<-6&&la>=-60&&lo>-20&&lo<=55,
+  links:[['SAWS Marine','South African Weather Service','https://www.weathersa.co.za/']],
+  sos:[['MRCC Cape Town','+27 21 938-3300 / VHF 16']]},
+ {id:'VIII',nome:'Índico Norte',coord:'Índia (IMD) / Maurício',
+  match:(la,lo)=>la<=30&&la>=-30&&lo>55&&lo<=95,
+  links:[['IMD — Marine','India Meteorological Department','https://mausam.imd.gov.in/']],
+  sos:[['Indian Coast Guard','☎ 1554 / VHF 16']]},
+ {id:'X',nome:'Austrália',coord:'Austrália (BOM)',
+  match:(la,lo)=>la<-10&&la>=-60&&lo>95&&lo<=170,
+  links:[['BOM Marine','Bureau of Meteorology','http://www.bom.gov.au/marine/']],
+  sos:[['AMSA RCC','+61 2 6230-6811 / 1800 641 792'],['Emergência','☎ 000 · VHF 16 · 27 MHz ch 88']]},
+ {id:'XI',nome:'Pacífico Oeste',coord:'Japão (JMA) / China',
+  match:(la,lo)=>la>=-10&&la<=45&&lo>95&&lo<=180,
+  links:[['JMA Marine','Japan Meteorological Agency','https://www.jma.go.jp/jma/indexe.html']],
+  sos:[['Japan Coast Guard','☎ 118 / VHF 16']]},
+ {id:'XIV',nome:'Pacífico Sul',coord:'Nova Zelândia (MetService)',
+  match:(la,lo)=>la<-10&&la>=-60&&(lo>170||lo<-120),
+  links:[['MetService Marine','Previsão marítima NZ','https://www.metservice.com/marine/']],
+  sos:[['RCCNZ','+64 4 577-8030 / VHF 16'],['Emergência','☎ 111']]}];
+const GLOBAL_LINKS=[['GMDSS Weather (global)','Boletins oficiais de TODAS as METAREAs','https://weather.gmdss.org/'],
+ ['Nautical Almanac 2026 (PDF)','Almanaque completo grátis','https://thenauticalalmanac.com/TNARegular/2026_Nautical_Almanac.pdf'],
+ ['DHN — Publicações','Diretoria de Hidrografia e Navegação (BR)','https://www.marinha.mil.br/dhn/']];
+const SOS_UNIVERSAL=[['Socorro (voz)','VHF Canal 16 — 156,8 MHz'],['Socorro digital (DSC)','VHF Canal 70 · MMSI'],
+ ['EPIRB / PLB','406 MHz — via satélite Cospas-Sarsat'],['NAVTEX internacional','518 kHz'],
+ ['Procedimento','MAYDAY ×3 → embarcação, posição, perigo, POB']];
+const SOS_TEL={V:['185','SALVAMAR — Marinha do Brasil'],VI:['106','Prefectura Naval Argentina'],
+  XV:['137','DIRECTEMAR Chile'],IV:['911','Guarda Costeira (perto da costa)'],XII:['911','Guarda Costeira (perto da costa)'],
+  I:['999','Coastguard'],II:['112','Emergência marítima'],III:['112','Emergência marítima'],VII:['112','Emergência'],
+  VIII:['1554','Indian Coast Guard'],X:['000','Emergência Austrália'],XI:['118','Japan Coast Guard'],XIV:['111','Emergência NZ']};
+function fmtPos(la,lo){
+  const f=(v,pos,neg)=>{const s=v<0?neg:pos;v=Math.abs(v);const g=Math.floor(v);
+    return `${g}° ${((v-g)*60).toFixed(1).replace('.',',')}' ${s}`;};
+  return f(la,'Norte','Sul')+' · '+f(lo,'Leste','Oeste');}
+let boatName=localStorage.getItem('pn_boat')||'Polaris';
+let boatDesc=localStorage.getItem('pn_boatdesc')||'veleiro Fast 345';
+function saveBoat(){
+  boatName=$('boatName').value.trim()||'—';boatDesc=$('boatDesc').value.trim();
+  localStorage.setItem('pn_boat',boatName);localStorage.setItem('pn_boatdesc',boatDesc);
+  $('sosScript').innerHTML=sosScriptHTML(($('sosScript').dataset&&$('sosScript').dataset.pos)||'[posição]');}
+function sosScriptHTML(posTxt){
+  const s=$('sosScript');if(s&&s.dataset)s.dataset.pos=posTxt;
+  return `«<b>MAYDAY, MAYDAY, MAYDAY.</b><br>Aqui é o <b>${boatDesc?boatDesc+' ':''}${boatName}</b>, repito, <b>${boatName}, ${boatName}</b>.<br>`+
+   `Nossa posição é <b>${posTxt}</b>.<br>Estamos com <b>[diga o problema: afundando · incêndio · pessoa na água · emergência médica]</b>.<br>`+
+   `Somos <b>[número]</b> pessoas a bordo.<br>Precisamos de socorro imediato. <b>Câmbio.</b>»`;}
+function openSOS(){
+  const ma=loc?METAREAS.find(m=>m.match(loc.lat,loc.lon)):null;
+  $('sosMArea').textContent=ma?`Região: METAREA ${ma.id} — ${ma.nome}`:'Sem local selecionado — instruções universais';
+  const tel=ma?SOS_TEL[ma.id]:null;
+  $('sosPhone').innerHTML=tel
+    ?`<a class="sosCall" href="tel:${tel[0]}">📞 LIGUE ${tel[0]}<small>${tel[1]} — se houver sinal de celular. Sem sinal, use o rádio (passos abaixo).</small></a>`
+    :`<div class="sosCall" style="background:#7f1d1d">📻 Use o rádio VHF<small>siga os passos abaixo</small></div>`;
+  $('boatName').value=boatName;$('boatDesc').value=boatDesc;
+  $('sosScript').innerHTML=sosScriptHTML(loc?fmtPos(loc.lat,loc.lon)+' <small>(local selecionado — atualize pelo GPS)</small>':'[latitude e longitude do GPS]');
+  $('sosMGrid').innerHTML=SOS_UNIVERSAL.concat(ma?ma.sos:[]).map(s=>
+    `<div class="astro"><div class="lbl">${s[0]}</div><b>${s[1]}</b></div>`).join('');
+  $('sosModal').classList.add('open');}
+function sosFillGPS(){
+  if(!navigator.geolocation)return alert('GPS indisponível neste aparelho');
+  navigator.geolocation.getCurrentPosition(p=>{
+    $('sosScript').innerHTML=sosScriptHTML(fmtPos(p.coords.latitude,p.coords.longitude)+' <small>✓ GPS agora</small>');
+  },()=>alert('Não foi possível obter o GPS — ative a localização'),{enableHighAccuracy:true,timeout:10000});}
+function closeSOS(){$('sosModal').classList.remove('open');}
+function renderBulletins(){
+  const ma=METAREAS.find(m=>m.match(loc.lat,loc.lon));
+  $('bulArea').textContent=ma?`· METAREA ${ma.id} — ${ma.nome} · coord. ${ma.coord}`:'· fora de METAREA mapeada — fontes globais';
+  const links=(ma?ma.links:[]).concat(GLOBAL_LINKS);
+  $('bulLinks').innerHTML=links.map(l=>`<a href="${l[2]}" target="_blank"><span>${l[0]}<small>${l[1]}</small></span></a>`).join('');
+  const sos=SOS_UNIVERSAL.concat(ma?ma.sos:[]);
+  $('sosBox').innerHTML=sos.map(s=>`<div class="astro"><div class="lbl">${s[0]}</div><b>${s[1]}</b></div>`).join('');
+}
+/* ---------- estrelas de navegação (J2000 + precessão) ---------- */
+const STARS={'Acamar':'2 58 16 -40 18 17','Achernar':'1 37 42.8 -57 14 12','Acrux':'12 26 35.9 -63 5 57',
+'Adhara':'6 58 37.5 -28 58 20','Aldebaran':'4 35 55.2 16 30 33','Alioth':'12 54 1.7 55 57 35',
+'Alkaid':'13 47 32.4 49 18 48',"Al Na'ir":'22 8 14 -46 57 40','Alnilam':'5 36 12.8 -1 12 7',
+'Alphard':'9 27 35.2 -8 39 31','Alphecca':'15 34 41.3 26 42 53','Alpheratz':'0 8 23.3 29 5 26',
+'Altair':'19 50 47 8 52 6','Ankaa':'0 26 17 -42 18 22','Antares':'16 29 24.4 -26 25 55',
+'Arcturus':'14 15 39.7 19 10 57','Atria':'16 48 39.9 -69 1 40','Avior':'8 22 30.8 -59 30 34',
+'Bellatrix':'5 25 7.9 6 20 59','Betelgeuse':'5 55 10.3 7 24 25','Canopus':'6 23 57.1 -52 41 44',
+'Capella':'5 16 41.4 45 59 53','Deneb':'20 41 25.9 45 16 49','Denebola':'11 49 3.6 14 34 19',
+'Diphda':'0 43 35.4 -17 59 12','Dubhe':'11 3 43.7 61 45 3','Elnath':'5 26 17.5 28 36 27',
+'Eltanin':'17 56 36.4 51 29 20','Enif':'21 44 11.2 9 52 30','Fomalhaut':'22 57 39 -29 37 20',
+'Gacrux':'12 31 9.9 -57 6 48','Gienah':'12 15 48.4 -17 32 31','Hadar':'14 3 49.4 -60 22 23',
+'Hamal':'2 7 10.4 23 27 45','Kaus Australis':'18 24 10.3 -34 23 5','Kochab':'14 50 42.3 74 9 20',
+'Markab':'23 4 45.7 15 12 19','Menkar':'3 2 16.8 4 5 23','Menkent':'14 6 40.9 -36 22 12',
+'Miaplacidus':'9 13 12 -69 43 2','Mirfak':'3 24 19.4 49 51 40','Nunki':'18 55 15.9 -26 17 48',
+'Peacock':'20 25 38.9 -56 44 6','Polaris':'2 31 49 89 15 51','Pollux':'7 45 18.9 28 1 34',
+'Procyon':'7 39 18.1 5 13 30','Rasalhague':'17 34 56.1 12 33 36','Regulus':'10 8 22.3 11 58 2',
+'Rigel':'5 14 32.3 -8 12 6','Rigil Kentaurus':'14 39 36.5 -60 50 2','Sabik':'17 10 22.7 -15 43 30',
+'Schedar':'0 40 30.4 56 32 14','Shaula':'17 33 36.5 -37 6 14','Sirius':'6 45 8.9 -16 42 58',
+'Spica':'13 25 11.6 -11 9 41','Suhail':'9 7 59.8 -43 25 57','Vega':'18 36 56.3 38 47 1',
+'Zubenelgenubi':'14 50 52.7 -16 2 30'};
+function parseStar(s){const p=s.split(/\s+/).map(Number);
+  const ra=(p[0]+p[1]/60+p[2]/3600)*15, sg=p[3]<0||Object.is(p[3],-0)?-1:1;
+  return {ra, dec:sg*(Math.abs(p[3])+p[4]/60+p[5]/3600)};}
+function precess(ra0,dec0,ms){ // J2000 → data (Meeus cap. 21)
+  const T=(ms-J2000)/3155760000000; // séculos julianos
+  const as=1/3600;
+  const zeta=rad*as*(2306.2181*T+0.30188*T*T+0.017998*T*T*T),
+        zz  =rad*as*(2306.2181*T+1.09468*T*T+0.018203*T*T*T),
+        th  =rad*as*(2004.3109*T-0.42665*T*T-0.041833*T*T*T);
+  const a=rad*ra0+zeta, d=rad*dec0;
+  const A=Math.cos(d)*Math.sin(a),
+        B=Math.cos(th)*Math.cos(d)*Math.cos(a)-Math.sin(th)*Math.sin(d),
+        C=Math.sin(th)*Math.cos(d)*Math.cos(a)+Math.cos(th)*Math.sin(d);
+  return {ra:((deg*(Math.atan2(A,B)+zz))%360+360)%360, dec:deg*Math.asin(C)};}
+function starCalc(){
+  const nm=$('starSel').value;if(!nm||!loc)return;
+  const dv=$('almDate').value,tv=$('starTime').value||'21:00';
+  const ms=new Date(dv+'T'+tv+':00'+offStr()).getTime();
+  const {ra,dec}=precess(parseStar(STARS[nm]).ra,parseStar(STARS[nm]).dec,ms);
+  const sha=(360-ra)%360, ahar=gmstDeg(toDays(ms)), gha=(ahar+sha)%360;
+  const lha=((gha+loc.lon)%360+360)%360;
+  const H=rad*lha,phi=rad*loc.lat,de=rad*dec;
+  const hc=Math.asin(Math.sin(phi)*Math.sin(de)+Math.cos(phi)*Math.cos(de)*Math.cos(H));
+  const az=(deg*Math.atan2(Math.sin(H),Math.cos(H)*Math.sin(phi)-Math.tan(de)*Math.cos(phi))+180)%360;
+  const vis=deg*hc>0;
+  $('starOut').innerHTML=[
+    ['Declinação',dgmDec(dec)],['ARV (SHA)',dgm(sha)],['AHG (Greenwich)',dgm(gha)],['AHL (local)',dgm(lha)],
+    ['Altura calculada (Hc)',(deg*hc).toFixed(1)+'°'+(vis?'':' — abaixo do horizonte')],
+    ['Azimute (Az)',az.toFixed(0)+'° '+compass(az)],
+  ].map(a=>`<div class="astro"><div class="lbl">${a[0]}</div><b style="${a[0].includes('Altura')&&!vis?'color:var(--warn)':''}">${a[1]}</b></div>`).join('');
+}
+/* ---------- boot ---------- */
+if(loc){loadAll();}else{openModal();}
+</script>
+</body>
+</html>
